@@ -120,7 +120,6 @@ nrow(A_2p_shots) / nrow(Team_A_shots)
 
 
 
-
 ## C3 zones for Team A
 ```{r}
 # filter for shots in the corner
@@ -149,6 +148,7 @@ nrow(A_corner_3) / nrow(Team_A_shots)
 ```
 
 
+
 ### Double-check for Team A
 ```{r}
 # there is no overlap for the three locations, so sum should each total
@@ -157,23 +157,6 @@ nrow(Team_A_shots)
 
 # PASSED
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -280,6 +263,8 @@ nrow(B_corner_3) / nrow(Team_B_shots)
 
 ## Around 0.04911 percentage of shots were attempted in the C3 zone for Team B
 ```
+
+
 
 ### Double-check for Team B
 ```{r}
