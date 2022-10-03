@@ -1,0 +1,292 @@
+---
+title: "Joseph_Chang_OKC_Thunder"
+author: "Joseph Chang"
+date: "10/2/2022"
+output: pdf_document
+---
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE}
+library(knitr)
+library(dplyr)
+library(tidyverse)
+```
+
+# IMPORT CSV FILE
+```{r}
+label <- c('Team', 'x', 'y', 'Make')
+shots <- read.csv("/Users/josephchang/Downloads/shots_data.csv", col.names=label)
+head(shots,20)
+
+# check for null values, missing values, errors, and statistics
+summary(shots)
+```
+
+# FILTER DATA
+```{r}
+# divide the shots data into the two teams
+Team_A_shots <- shots %>% filter(shots[,1] == 'Team A')
+head(Team_A_shots, 5)
+
+Team_B_shots <- shots %>% filter(shots[,1] == 'Team B')
+head(Team_B_shots, 5)
+```
+
+
+# PLOT OF TEAM'S A AND TEAM'S B SHOT LOCATIONS
+```{r}
+plot(Team_A_shots$x, Team_A_shots$y, main = "Team A")
+plot(Team_B_shots$x, Team_B_shots$y, main = "Team B")
+```
+
+
+
+# TEAM A
+## NC3 zones for Team A
+```{r}
+# if we disregard the corner 3 areas, our goal is to treat the 3-point arc as a semi-circle, with 23.75 as the radius. But since there is a tiny area above the corner 3 area, we must split into two parts: the area above the corner 3 but below point where the 3-point arc breaks, and the area outside the semi-circle, or 3-point arc
+
+# we have to find the x-length of this tiny area. Since we know the x-coordinate of when the arc breaks is 23.75 (based on the radius of 23.75 of the semicircle), and the distance from middle of court to corner 3 is 22.0, we can use Pythagorean theorem to determine the x-length of corner-3. Once calculated, the x-length is 8.94777. We then subtract that by 7.8 to get 1.1477, which is the x-length of tiny area.
+
+# define the area above corner 3 but below the point where arc breaks as tiny_break, and only include the 3-pointers there
+A_tiny_break <- Team_A_shots %>% filter((y > 7.8) & (y < 8.94777)) %>% filter(x < -22|x > 22)
+
+# Filter data further to determine which shots are 3s and 2s by using euclidean distance formula to see if shot was behind arc.
+# Note: shot has to be greater than 23.75 feet from basket because on the line is considered a 2-point shot
+A_behind_arc <- Team_A_shots %>% filter(y >= 8.94777) %>% mutate(E = sqrt((x^2)+(y^2))) %>% filter(E>23.75)
+plot(A_behind_arc$x, A_behind_arc$y)
+
+# combine the two areas defined above to get ALL shots that are NOT corner 3s
+A_NC3 <- rbind(A_tiny_break, A_behind_arc)
+plot(A_NC3$x, A_NC3$y)
+```
+
+```{r}
+# find how many shots taken, how many shots made, and effective field goal percentage
+table(A_NC3$Make)
+length(A_NC3$Make)
+
+# eFG%
+A_NC3_eFG <- (21+(0.5*21))/68
+A_NC3_eFG
+
+## We see 21 field goals were made, and 68 field goals attempted
+## Effective field goal percentage was 0.46323
+```
+
+```{r}
+# Find percentage of shots attempted in the NC3 zone of all shots for Team A
+nrow(A_NC3) / nrow(Team_A_shots)
+
+## Around 0.2428 percentage of shots were attempted in the C3 zone for Team A
+```
+
+
+
+## 2PT zones for Team A
+```{r}
+# Filter data for shots inside the arc by using euclidean distance formula
+# Note: shots at 23.75 feet away from basket is consider a 2-point shot
+A_inside_arc <- Team_A_shots %>% filter(y >= 8.94777) %>% mutate(E = sqrt((x^2)+(y^2))) %>% filter(E<=23.75)
+plot(A_inside_arc$x, A_inside_arc$y)
+
+# include data for shots inside 3-point line vertically (below semicircle and inside corner 3s)
+A_inside_rectangle <- Team_A_shots %>% filter(x >= -22 & x <= 22) %>% filter(y < 8.94777)
+plot(A_inside_rectangle$x, A_inside_rectangle$y)
+
+# combine the two datasets
+A_2p_shots <- rbind(A_inside_arc[-5], A_inside_rectangle)
+plot(A_2p_shots$x, A_2p_shots$y)
+```
+
+```{r}
+# find how many shots taken, how many shots made, and effective field goal percentage
+table(A_2p_shots$Make)
+length(A_2p_shots$Make)
+
+# eFG%
+A_2p_shots_eFG <- (95+(0.5*0))/194
+A_2p_shots_eFG
+
+## We see 95 field goals were made, and 194 field goals attempted
+## Effective field goal percentage was 0.48969
+```
+
+```{r}
+#Find percentage of shots attempted in the 2PT zone of all shots for Team A
+nrow(A_2p_shots) / nrow(Team_A_shots)
+
+## Around 0.6928 percentage of shots were attempted in the C3 zone for Team A
+```
+
+
+
+
+## C3 zones for Team A
+```{r}
+# filter for shots in the corner
+A_corner_3 <- Team_A_shots %>% filter(y <= 7.8) %>% filter((x < -22) | (x > 22))
+plot(A_corner_3$x, A_corner_3$y, ylim= c(-5,30))
+```
+
+```{r}
+# determine how many shots were taken, how many shots made, and effective field goal percentage
+table(A_corner_3$Make)
+length(A_corner_3$Make)
+
+# eFG%
+A_corner_eFG <- (9+(0.5*9))/18
+A_corner_eFG
+
+## We see 9 field goals were made, and 18 field goals attempted
+## Effective field goal percentage was 0.75
+```
+
+```{r}
+# Find percentage of shots attempted in  the C3 zone of all shots for Team A
+nrow(A_corner_3) / nrow(Team_A_shots)
+
+## Around 0.06429 percentage of shots were attempted in the C3 zone for Team A
+```
+
+
+### Double-check for Team A
+```{r}
+# there is no overlap for the three locations, so sum should each total
+nrow(A_NC3) + nrow(A_2p_shots) + nrow(A_corner_3)
+nrow(Team_A_shots)
+
+# PASSED
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TEAM B
+## NC3 zones for Team B
+```{r}
+# see notes for "NC3 zone for Team A"
+B_tiny_break <- Team_B_shots %>% filter((y > 7.8) & (y < 8.94777)) %>% filter(x < -22|x > 22)
+
+# Filter data further to determine which shots are 3s and 2s by using euclidean distance formula to see if shot was behind arc
+B_behind_arc <- Team_B_shots %>% filter(y >= 8.94777) %>% mutate(E = sqrt((x^2)+(y^2))) %>% filter(E>23.75)
+plot(B_behind_arc$x, B_behind_arc$y)
+
+# combine the two areas defined above to get ALL shots that are NOT corner 3s
+B_NC3 <- rbind(B_tiny_break, B_behind_arc[-5])
+plot(B_NC3$x, B_NC3$y)
+```
+
+
+```{r}
+# find how many shots taken, how many shots made, and effective field goal percentage
+table(B_NC3$Make)
+length(B_NC3$Make)
+
+# eFG%
+B_NC3_eFG <- (21+(0.5*21))/62
+B_NC3_eFG
+
+## We see 21 field goals were made, and 62 field goals attempted
+## Effective field goal percentage was 0.50806
+```
+
+```{r}
+# Find percentage of shots attempted in the NC3 zone of all shots for Team A
+nrow(B_NC3) / nrow(Team_B_shots)
+
+## Around 0.27678 percentage of shots were attempted in the C3 zone for Team A
+```
+
+
+
+## 2PT zones for Team B
+```{r}
+# Filter data for shots inside the arc by using euclidean distance formula
+B_inside_arc <- Team_B_shots %>% filter(y >= 8.94777) %>% mutate(E = sqrt((x^2)+(y^2))) %>% filter(E<=23.75)
+plot(B_inside_arc$x, B_inside_arc$y)
+
+# include data for shots inside and outside corner 3s
+B_inside_rectangle <- Team_B_shots %>% filter(x >= -22 & x <= 22) %>% filter(y < 8.94777)
+plot(B_inside_rectangle$x, B_inside_rectangle$y)
+
+# combine the two datasets
+B_2p_shots <- rbind(B_inside_arc[-5], B_inside_rectangle)
+plot(B_2p_shots$x, B_2p_shots$y)
+```
+
+```{r}
+# find how many shots taken, how many shots made, and effective field goal percentage
+table(B_2p_shots$Make)
+length(B_2p_shots$Make)
+
+# eFG%
+B_2p_shots_eFG <- (67+(0.5*0))/151
+B_2p_shots_eFG
+
+## We see 67 field goals were made, and 151 field goals attempted
+## Effective field goal percentage was 0.4437
+```
+
+```{r}
+#Find percentage of shots attempted in the 2PT zone of all shots for Team A
+nrow(B_2p_shots) / nrow(Team_B_shots)
+
+## Around 0.6741 percentage of shots were attempted in the C3 zone for Team A
+```
+
+
+
+## C3 zones for Team B
+```{r}
+# filter shots in the corner
+B_corner_3 <- Team_B_shots %>% filter(y <= 7.8 & (x < -22 | x > 22))
+plot(B_corner_3$x, B_corner_3$y, ylim= c(-5,30))
+```
+
+```{r}
+# Using the filtered dataframe called B_corner_3, we can determine how many shots were taken, how many shots made, and effective field goal percentage
+table(B_corner_3$Make)
+length(B_corner_3$Make)
+
+# eFG%
+B_corner_eFG <- (4+(0.5*4))/11
+B_corner_eFG
+
+## We see that 4 shots were made out of 11 attempts from corner 3's
+## Effective field goal percentage was 0.54545
+```
+
+```{r}
+# Find percentage of shots attempted in  the C3 zone of all shots for Team B
+nrow(B_corner_3) / nrow(Team_B_shots)
+
+## Around 0.04911 percentage of shots were attempted in the C3 zone for Team B
+```
+
+### Double-check for Team B
+```{r}
+# number of rows should match
+nrow(B_NC3)+nrow(B_corner_3)+nrow(B_2p_shots)
+nrow(Team_B_shots)
+
+# PASSED
+```
+
